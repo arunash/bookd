@@ -11,16 +11,20 @@ Booking by phone steals your workday: offices are only open while you're at work
 ## Quick start
 
 ```bash
-git clone https://github.com/<you>/bookd.git
-cd bookd
-cd web && npm install
-npm run setup          # generates secrets, asks for your Vapi keys, creates the DB
-npm run dev            # portal at http://localhost:3000
+npx create-bookd my-agent        # scaffold + install + setup wizard
+cd my-agent/web && npm run dev    # portal at http://localhost:3000
+```
+
+Or clone manually:
+
+```bash
+git clone https://github.com/arunash/bookd.git
+cd bookd/web && npm install
+npm run setup                     # generates secrets, asks for your Vapi keys, creates the DB
+npm run dev
 ```
 
 You can click through the portal with **no accounts at all**. To place a *real* call you need a [Vapi](https://vapi.ai) account (the voice runtime) and a phone number — the wizard asks for those two values.
-
-**Coming soon:** `npx create-bookd my-agent` for a one-command scaffold.
 
 ---
 

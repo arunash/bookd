@@ -1,0 +1,31 @@
+{
+  "name": "create-bookd",
+  "version": "0.1.0",
+  "description": "Scaffold a local-first personal AI phone-booking agent (book-d).",
+  "type": "module",
+  "bin": {
+    "create-bookd": "index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "voice-ai",
+    "vapi",
+    "appointment",
+    "booking",
+    "agent",
+    "phone",
+    "create"
+  ],
+  "license": "MIT",
+  "author": "Shiva Arunachalam",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arunash/bookd.git"
+  }
+}

@@ -10,6 +10,8 @@ Booking by phone steals your workday: offices are only open while you're at work
 
 > Built in the open. Runs **local-first** — your data lives in a single SQLite file on your machine, PII/PHI encrypted at rest. MIT licensed.
 
+**⭐ If book-d saves you a phone call, give it a star** — stars are the only way I know it's useful to someone.
+
 ---
 
 ## Quick start

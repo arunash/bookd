@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Responsible use & safety
+    url: https://github.com/arunash/bookd#️-responsible-use--read-this
+    about: book-d places real phone calls — please read before opening an issue.
+  - name: Vapi documentation
+    url: https://docs.vapi.ai
+    about: Questions about the voice runtime itself (keys, numbers, models).

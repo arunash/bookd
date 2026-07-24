@@ -1,5 +1,10 @@
 # book-d
 
+[![npm](https://img.shields.io/npm/v/create-bookd?color=cb3837&logo=npm)](https://www.npmjs.com/package/create-bookd) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js&logoColor=white)](#requirements) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
+<!-- Add a portal screenshot: drop docs/portal.png in the repo and uncomment the next line -->
+<!-- <p align="center"><img src="docs/portal.png" alt="book-d portal" width="760"></p> -->
+
 **A personal AI phone-booking agent that runs on your machine.** It calls a business for you — navigates the phone tree, waits on hold, talks to the receptionist to book an appointment — and patches *you* in for the moments that actually need a human. Comes with a local web portal to add who/where/when and watch calls unfold.
 
 Booking by phone steals your workday: offices are only open while you're at work, and 95% of every call is menus and hold music. book-d eats that part.

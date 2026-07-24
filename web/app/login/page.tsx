@@ -2,7 +2,8 @@ import LoginButton from "./login-button";
 
 export const dynamic = "force-dynamic";
 
-export default function LoginPage({ searchParams }: { searchParams: { next?: string; error?: string } }) {
+export default async function LoginPage(props: { searchParams: Promise<{ next?: string; error?: string }> }) {
+  const searchParams = await props.searchParams;
   return (
     <main className="min-h-screen bg-cream flex items-center justify-center px-6">
       <div className="card-pop p-8 sm:p-10 w-full max-w-md text-center">

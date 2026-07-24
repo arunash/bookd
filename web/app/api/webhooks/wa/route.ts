@@ -17,6 +17,8 @@
  *   }
  */
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
+import { constantTimeEqual } from "@/lib/secure";
 import { parseInboundWebhook, sendWhatsAppText, isBookedMessage, stripBookPrefix } from "@/lib/wa";
 import { parseBookingIntent } from "@/lib/intent-parser";
 import { prisma } from "@/lib/db";
@@ -35,9 +37,22 @@ export async function GET(req: NextRequest) {
   return new NextResponse("forbidden", { status: 403 });
 }
 
+// Verify Meta's X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the app secret).
+// Fail-closed in production so nobody can inject fake inbound messages.
+function verifyMetaSignature(req: NextRequest, raw: string): boolean {
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) return process.env.NODE_ENV !== "production";
+  const header = req.headers.get("x-hub-signature-256") ?? "";
+  const expected = "sha256=" + createHmac("sha256", secret).update(raw).digest("hex");
+  return constantTimeEqual(header, expected);
+}
+
 export async function POST(req: NextRequest) {
+  let raw: string;
+  try { raw = await req.text(); } catch { return new NextResponse("bad json", { status: 400 }); }
+  if (!verifyMetaSignature(req, raw)) return new NextResponse("forbidden", { status: 403 });
   let body: unknown;
-  try { body = await req.json(); } catch { return new NextResponse("bad json", { status: 400 }); }
+  try { body = JSON.parse(raw); } catch { return new NextResponse("bad json", { status: 400 }); }
 
   const messages = parseInboundWebhook(body);
   for (const m of messages) {

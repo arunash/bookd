@@ -17,15 +17,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { placeBookingCall } from "@/lib/booking-orchestrator";
 import { MAX_ATTEMPTS_PER_DAY, MIN_MINUTES_BETWEEN, BUSINESS_OPEN_HOUR_PT, BUSINESS_CLOSE_HOUR_PT, nowInPT } from "@/lib/business-hours";
+import { constantTimeEqual } from "@/lib/secure";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
+  // This endpoint PLACES CALLS — never leave it unauthenticated in production.
   const expected = process.env.CRON_SECRET;
-  if (expected) {
+  if (!expected) {
+    if (process.env.NODE_ENV === "production") return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
+  } else {
     const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!constantTimeEqual(auth, `Bearer ${expected}`)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const { hour, weekday } = nowInPT();

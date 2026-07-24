@@ -15,6 +15,7 @@ import { prisma } from "@/lib/db";
 import { encryptForUser } from "@/lib/crypto";
 import { getCall } from "@/lib/vapi";
 import { classifyCall, type CallOutcome } from "@/lib/call-classifier";
+import { constantTimeEqual } from "@/lib/secure";
 
 export const dynamic = "force-dynamic";
 
@@ -58,12 +59,12 @@ type VapiPayload = {
 
 function verifySecret(req: NextRequest, body: unknown): boolean {
   const expected = process.env.VAPI_WEBHOOK_SECRET ?? process.env.CRON_SECRET;
-  if (!expected) return true; // dev — no secret configured
+  if (!expected) return process.env.NODE_ENV !== "production"; // fail-closed in prod
   const header = req.headers.get("x-vapi-secret");
-  if (header === expected) return true;
+  if (header && constantTimeEqual(header, expected)) return true;
   // Some Vapi setups put the secret inline
   const inline = (body as { secret?: string })?.secret;
-  return inline === expected;
+  return typeof inline === "string" && constantTimeEqual(inline, expected);
 }
 
 export async function POST(req: NextRequest) {

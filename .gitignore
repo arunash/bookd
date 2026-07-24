@@ -1,0 +1,17 @@
+# deps / build
+node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+
+# secrets & local data — NEVER commit
+.env
+web/.env
+web/.env.*
+!web/.env.example
+web/dev.db
+web/dev.db-journal
+*.log
+
+# os
+.DS_Store

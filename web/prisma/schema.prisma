@@ -1,0 +1,244 @@
+// book-d — AI phone-booking agent (open-source, local-first)
+// SQLite by default: a single ./dev.db file, zero services to run.
+// Encrypted columns (Bytes): patient/insurance PII via lib/crypto.ts (AES-256-GCM
+// over ENCRYPTION_KEY). A DB leak alone is useless without the key.
+//
+// Notes on the SQLite port:
+//  - Enums are stored as String (SQLite has no native enum). Allowed values are
+//    documented in comments and validated in app code / zod.
+//  - List columns are stored as Json (SQLite has no scalar arrays). Prisma
+//    returns/accepts plain JS arrays for these.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ── User (the booker — you) ────────────────────────────────────────────────
+model User {
+  id            String   @id @default(cuid())
+  phone         String?  @unique // E.164, no plus; used for hybrid patch-through
+  email         String?  @unique
+  name          String?
+  timezone      String   @default("America/Los_Angeles")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Card on file. PAN/CVV are encrypted (AES-256-GCM via lib/crypto.ts) so a
+  // DB leak alone is useless. brand/last4 stay plaintext for display only.
+  cardBrand          String?
+  cardLast4          String?
+  cardHolderNameEnc  Bytes?
+  cardNumberEnc      Bytes?
+  cardExpEnc         Bytes? // "MM/YY"
+  cardCvvEnc         Bytes?
+  cardZipEnc         Bytes?
+
+  people         Person[]
+  insurances     InsuranceProfile[]
+  providers      Provider[]
+  bookingRequests BookingRequest[]
+  bookings       Booking[]
+  calls          Call[]
+  integrations   Integration[]
+}
+
+// ── People we book for (patient, child, spouse, self) ──────────────────────
+model Person {
+  id            String   @id @default(cuid())
+  userId        String
+  relationship  String   // self | daughter | son | spouse | parent | other
+  // PII — encrypted at rest
+  firstNameEnc  Bytes
+  lastNameEnc   Bytes?
+  dobEnc        Bytes?
+  preferredPronoun String?
+  notes         String? // non-PHI ("verbal, communicates with iPad")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insurances     InsuranceProfile[]
+  bookingRequests BookingRequest[]
+  bookings       Booking[]
+
+  @@index([userId])
+}
+
+// ── Insurance for medical bookings ─────────────────────────────────────────
+model InsuranceProfile {
+  id          String   @id @default(cuid())
+  userId      String
+  personId    String
+  carrier     String   // e.g. "Blue Cross Blue Shield"
+  planName    String?  // e.g. "PPO Gold 5000"
+  network     String?  // e.g. "PPO" / "EPO" / "HMO"
+  memberIdEnc Bytes    // encrypted
+  groupIdEnc  Bytes?   // encrypted
+  rxBinEnc    Bytes?
+  pcpName     String?
+  primary     Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+}
+
+// ── Providers we call ──────────────────────────────────────────────────────
+model Provider {
+  id              String       @id @default(cuid())
+  userId          String
+  name            String       // "Cohen Speech Therapy" / "Downtown Dental"
+  serviceType     String       // pt | ot | speech | doctor | dentist | therapist | salon | restaurant | other
+  phone           String       // E.164 — primary number the agent dials
+  phones          Json         @default("[]") // additional E.164 numbers (scheduling line, alt branch, etc.)
+  address         String?
+  website         String?
+  onlineBookingUrl String?
+  email           String?
+  // What mode the agent uses for THIS provider — learned from outcomes
+  policy          String       @default("unknown") // unknown | ai_friendly | patch_through | human_required | online_only
+  policyReason    String?      // why we set this policy (e.g. "Refused AI on 2026-06-12")
+  inNetwork       Boolean?     // for medical, vs insurance
+  acceptedInsuranceCarriers Json @default("[]")
+  notes           String?
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingRequests BookingRequest[]
+  bookings       Booking[]
+  calls          Call[]
+
+  @@index([userId, serviceType, active])
+}
+
+// ── BookingRequest — created from a web form (or WhatsApp message) ─────────
+// One request can spawn multiple Call attempts.
+model BookingRequest {
+  id              String        @id @default(cuid())
+  userId          String
+  personId        String
+  providerId      String?       // null if not yet resolved
+  serviceTypeHint String?       // when provider isn't yet picked (see Provider.serviceType values)
+  rawRequest      String        // the raw request ("book Eliza PT this Thursday afternoon")
+  parsedSummary   String?       // model's interpretation
+  // Time preferences
+  earliestStart   DateTime?
+  latestStart     DateTime?
+  preferredDow    Json          @default("[]") // ["tue", "thu"]
+  preferredHourMin Int?         // 24-hour
+  preferredHourMax Int?
+  status          String        @default("queued") // queued | in_progress | booked | failed | cancelled | needs_user_input
+  attempts        Int           @default(0)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id])
+  calls    Call[]
+  booking  Booking?
+
+  @@index([userId, status])
+}
+
+// ── Booking — the final confirmed appointment ──────────────────────────────
+model Booking {
+  id              String   @id @default(cuid())
+  userId          String
+  personId        String
+  providerId      String
+  requestId       String   @unique
+  scheduledStart  DateTime
+  scheduledEnd    DateTime
+  location        String?
+  confirmationNumber String?
+  prepInstructions String?  // "arrive 10 min early, bring insurance card"
+  calendarEventId String?  // Google Calendar event id
+  outcome         String   // booked_by_agent | booked_by_user_via_patch | booked_via_portal
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person   Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  provider Provider       @relation(fields: [providerId], references: [id])
+  request  BookingRequest @relation(fields: [requestId], references: [id])
+
+  @@index([userId, scheduledStart])
+}
+
+// ── Call — one outbound attempt against a Provider for a BookingRequest ───
+model Call {
+  id             String   @id @default(cuid())
+  userId         String
+  providerId     String
+  requestId      String?
+  vapiCallId     String?  @unique
+  startedAt      DateTime?
+  endedAt        DateTime?
+  durationSec    Int?
+  costUsd        Float?
+  recordingUrl   String?
+  transcriptUrl  String?
+  transcriptEnc  Bytes?   // encrypted text version of transcript
+  outcome        String   @default("unknown") // unknown | booked | patched_then_booked | patched_unanswered | no_answer | busy | voicemail_left | voicemail_no_message | refused_by_provider | hung_up | error
+  outcomeDetail  String?     // free-form
+  patchedToUser  Boolean  @default(false)
+  patchAt        DateTime?
+  refusalDetected Boolean @default(false)
+  voicemailLeft  Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  Provider         @relation(fields: [providerId], references: [id])
+  request   BookingRequest?  @relation(fields: [requestId], references: [id])
+  events    CallEvent[]
+
+  @@index([requestId, createdAt(sort: Desc)])
+}
+
+model CallEvent {
+  id        String   @id @default(cuid())
+  callId    String
+  type      String   // vapi event name: call.started / transcript / speech.update / transfer.initiated / call.ended
+  payload   Json
+  createdAt DateTime @default(now())
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId, createdAt])
+}
+
+// ── Integrations (Google Calendar, future others) ─────────────────────────
+model Integration {
+  id             String    @id @default(cuid())
+  userId         String
+  provider       String    // google_calendar | vapi | twilio_wa
+  accessToken    String?   // encrypted via token-store
+  refreshToken   String?   // encrypted
+  tokenExpiresAt DateTime?
+  scope          String?
+  externalUserId String?
+  metadata       Json?
+  active         Boolean   @default(true)
+  lastSyncedAt   DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}

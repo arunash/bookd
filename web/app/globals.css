@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Warm palette */
+  --bg:           #FBF8F3;   /* warm cream — page background */
+  --bg-soft:      #F4ECDF;   /* peach-cream accent */
+  --surface:      #FFFFFF;   /* card surface */
+  --ink:          #1B1B1F;   /* primary text */
+  --ink-2:        #4A4A55;   /* secondary text */
+  --ink-3:        #8B8B95;   /* muted */
+  --rule:         #E9E2D5;   /* hairline borders */
+
+  --primary:      #EE6F50;   /* coral — primary accent */
+  --primary-50:   #FFF1EB;
+  --primary-100:  #FCDACC;
+  --primary-600:  #D85B3D;
+
+  --lilac:        #9B87F5;   /* lavender — secondary */
+  --lilac-50:     #F1EDFE;
+  --mint:         #5FBF94;   /* positive */
+  --mint-50:      #E4F5EC;
+  --rose:         #D7406B;   /* warning */
+
+  --shadow-soft: 0 1px 2px rgba(27, 27, 31, 0.04), 0 8px 24px rgba(27, 27, 31, 0.06);
+  --shadow-pop:  0 2px 4px rgba(27, 27, 31, 0.05), 0 14px 40px rgba(27, 27, 31, 0.10);
+
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-serif {
+  font-family: 'Instrument Serif', 'Tinos', Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.01em;
+}
+
+.font-mono-num {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Soft surface card */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+.card-pop {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 9999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.btn-primary:hover { background: #000; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-coral {
+  background: var(--primary);
+  color: white;
+  border-radius: 9999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.btn-coral:hover { background: var(--primary-600); }
+.btn-coral:active { transform: scale(0.98); }
+
+.btn-ghost {
+  color: var(--ink-2);
+  border-radius: 9999px;
+  padding: 10px 16px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.btn-ghost:hover { background: rgba(27, 27, 31, 0.04); color: var(--ink); }
+
+/* Subtle warm gradient for hero blobs */
+.hero-glow {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(238, 111, 80, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 100% 0%, rgba(155, 135, 245, 0.16) 0%, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(95, 191, 148, 0.12) 0%, transparent 60%);
+}
+
+/* Pretty input */
+.input {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  font-size: 15px;
+  line-height: 1.55;
+  width: 100%;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.input:focus { border-color: var(--ink); box-shadow: 0 0 0 4px rgba(27, 27, 31, 0.06); }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-ink   { color: var(--ink); }
+  .text-ink-2 { color: var(--ink-2); }
+  .text-ink-3 { color: var(--ink-3); }
+  .bg-cream   { background: var(--bg); }
+  .bg-soft    { background: var(--bg-soft); }
+  .border-rule{ border-color: var(--rule); }
+}
